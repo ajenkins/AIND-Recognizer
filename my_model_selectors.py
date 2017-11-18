@@ -117,7 +117,7 @@ class SelectorDIC(ModelSelector):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         best_n = 0
-        lowest_dic = float('inf')
+        highest_dic = float('-inf')
         for n in range(self.min_n_components, self.max_n_components):
             # Calculate log(P(X(i)) as logL
             model = self.base_model(n)
@@ -143,8 +143,8 @@ class SelectorDIC(ModelSelector):
             # Calculate DIC
             dic = logL - (1 / (len(self.words) - 1)) * anti_evidence_term
 
-            if dic < lowest_dic:
-                lowest_dic = dic
+            if dic > highest_dic:
+                highest_dic = dic
                 best_n = n
         return self.base_model(best_n)
 
