@@ -95,7 +95,7 @@ class SelectorBIC(ModelSelector):
             if bic < lowest_bic:
                 lowest_bic = bic
                 best_n = n
-        return self.base_mode(best_n)
+        return self.base_model(best_n)
 
 
 class SelectorDIC(ModelSelector):
