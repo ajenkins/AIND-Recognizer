@@ -116,8 +116,37 @@ class SelectorDIC(ModelSelector):
     def select(self):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-        # TODO implement model selection based on DIC scores
-        raise NotImplementedError
+        best_n = 0
+        lowest_dic = float('inf')
+        for n in range(self.min_n_components, self.max_n_components):
+            # Calculate log(P(X(i)) as logL
+            model = self.base_model(n)
+            # Use try/except to catch ValueError: rows of transmat_ must sum to 1.0
+            # https://discussions.udacity.com/t/hmmlearn-valueerror-rows-of-transmat--must-sum-to-1-0/229995/7
+            try:
+                logL = model.score(self.X, self.lengths)
+            except ValueError:
+                continue
+
+            # Calculate anti-evidence term
+            anti_evidence_term = 0
+            for word in self.words:
+                if word == self.this_word:
+                    continue
+                else:
+                    anti_X, anti_lengths = self.hwords[word]
+                    try:
+                        anti_evidence_term += model.score(anti_X, anti_lengths)
+                    except ValueError:
+                        continue
+
+            # Calculate DIC
+            dic = logL - (1 / (len(self.words) - 1)) * anti_evidence_term
+
+            if dic < lowest_dic:
+                lowest_dic = dic
+                best_n = n
+        return self.base_model(best_n)
 
 
 class SelectorCV(ModelSelector):
