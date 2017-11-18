@@ -81,7 +81,12 @@ class SelectorBIC(ModelSelector):
         for n in range(self.min_n_components, self.max_n_components):
             # Calculate logL
             model = self.base_model(n)
-            logL = model.score(self.X, self.lengths)
+            # Use try/except to catch ValueError: rows of transmat_ must sum to 1.0
+            # https://discussions.udacity.com/t/hmmlearn-valueerror-rows-of-transmat--must-sum-to-1-0/229995/7
+            try:
+                logL = model.score(self.X, self.lengths)
+            except ValueError:
+                continue
 
             # Calculate p
             initial_state_params = n - 1
