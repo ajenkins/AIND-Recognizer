@@ -29,7 +29,7 @@ def recognize(models: dict, test_set: SinglesData):
             try:
                 prob = model.score(*Xlengths)
             except ValueError:
-                prob = 0.0
+                prob = float('-inf')
             probability[word] = prob
             if prob > best_prob:
                 best_prob = prob
