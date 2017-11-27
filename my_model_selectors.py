@@ -85,7 +85,7 @@ class SelectorBIC(ModelSelector):
             # https://discussions.udacity.com/t/hmmlearn-valueerror-rows-of-transmat--must-sum-to-1-0/229995/7
             try:
                 logL = model.score(self.X, self.lengths)
-            except ValueError:
+            except (ValueError, AttributeError):
                 continue
 
             # Calculate p
@@ -125,7 +125,7 @@ class SelectorDIC(ModelSelector):
             # https://discussions.udacity.com/t/hmmlearn-valueerror-rows-of-transmat--must-sum-to-1-0/229995/7
             try:
                 logL = model.score(self.X, self.lengths)
-            except ValueError:
+            except (ValueError, AttributeError):
                 continue
 
             # Calculate anti-evidence term
@@ -172,7 +172,7 @@ class SelectorCV(ModelSelector):
                 try:
                     cumulative_logL += model.score(fold_X, fold_lengths)
                     count += 1
-                except ValueError:
+                except (ValueError, AttributeError):
                     continue
 
             # If all training folds fail, skip this n
