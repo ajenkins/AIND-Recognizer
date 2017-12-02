@@ -157,29 +157,43 @@ class SelectorCV(ModelSelector):
     def select(self):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
+        # Only split into folds if len(sequences) >= 3
+        # Else, just return n of highest logL
+        # https://discussions.udacity.com/t/question-with-model-selection-cross-validation/233047/2?u=aj.jenkins123
         best_n = 0
         highest_logL = float('-inf')
-        for n in range(self.min_n_components, self.max_n_components):
-            split_method = KFold(n_splits=min(len(self.sequences), 3))
-            count = 0
-            cumulative_logL = 0
-            # Calculate average logL of all training folds
-            for cv_train_idx, cv_test_idx in split_method.split(self.sequences):
-                fold_X, fold_lengths = combine_sequences(cv_train_idx, self.sequences)
-                model = self.base_model(n)
-                # Use try/except to catch ValueError: rows of transmat_ must sum to 1.0
-                # https://discussions.udacity.com/t/hmmlearn-valueerror-rows-of-transmat--must-sum-to-1-0/229995/7
-                try:
-                    cumulative_logL += model.score(fold_X, fold_lengths)
-                    count += 1
-                except (ValueError, AttributeError):
+        if len(self.sequences) >= 3:
+            for n in range(self.min_n_components, self.max_n_components):
+                split_method = KFold()
+                count = 0
+                cumulative_logL = 0
+                # Calculate average logL of all training folds
+                for cv_train_idx, cv_test_idx in split_method.split(self.sequences):
+                    fold_X, fold_lengths = combine_sequences(cv_train_idx, self.sequences)
+                    model = self.base_model(n)
+                    # Use try/except to catch ValueError: rows of transmat_ must sum to 1.0
+                    # https://discussions.udacity.com/t/hmmlearn-valueerror-rows-of-transmat--must-sum-to-1-0/229995/7
+                    try:
+                        cumulative_logL += model.score(fold_X, fold_lengths)
+                        count += 1
+                    except (ValueError, AttributeError):
+                        continue
+
+                # If all training folds fail, skip this n
+                if count == 0:
                     continue
 
-            # If all training folds fail, skip this n
-            if count == 0:
-                continue
-            avg_logL = cumulative_logL / count
-            if avg_logL > highest_logL:
-                highest_logL = avg_logL
-                best_n = n
+                avg_logL = cumulative_logL / count
+                if avg_logL > highest_logL:
+                    highest_logL = avg_logL
+                    best_n = n
+        else:
+            for n in range(self.min_n_components, self.max_n_components):
+                try:
+                    logL = self.base_model(n).score(self.X, self.lengths)
+                except (ValueError, AttributeError):
+                    continue
+                if logL > highest_logL:
+                    highest_logL = logL
+                    best_n = n
         return self.base_model(best_n)
