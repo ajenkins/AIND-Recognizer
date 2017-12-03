@@ -78,7 +78,7 @@ class SelectorBIC(ModelSelector):
 
         best_n = 0
         lowest_bic = float('inf')
-        for n in range(self.min_n_components, self.max_n_components):
+        for n in range(self.min_n_components, self.max_n_components + 1):
             # Calculate logL
             model = self.base_model(n)
             # Use try/except to catch ValueError: rows of transmat_ must sum to 1.0
@@ -95,7 +95,7 @@ class SelectorBIC(ModelSelector):
             p = initial_state_params + transition_params + emission_params
 
             # Calculate BIC
-            bic = -2 * logL + p * math.log(n)
+            bic = -2 * logL + p * math.log(len(self.lengths))
 
             if bic < lowest_bic:
                 lowest_bic = bic
@@ -118,7 +118,7 @@ class SelectorDIC(ModelSelector):
 
         best_n = 0
         highest_dic = float('-inf')
-        for n in range(self.min_n_components, self.max_n_components):
+        for n in range(self.min_n_components, self.max_n_components + 1):
             # Calculate log(P(X(i)) as logL
             model = self.base_model(n)
             # Use try/except to catch ValueError: rows of transmat_ must sum to 1.0
@@ -163,18 +163,21 @@ class SelectorCV(ModelSelector):
         best_n = 0
         highest_logL = float('-inf')
         if len(self.sequences) >= 3:
-            for n in range(self.min_n_components, self.max_n_components):
+            for n in range(self.min_n_components, self.max_n_components + 1):
                 split_method = KFold()
                 count = 0
                 cumulative_logL = 0
                 # Calculate average logL of all training folds
                 for cv_train_idx, cv_test_idx in split_method.split(self.sequences):
-                    fold_X, fold_lengths = combine_sequences(cv_train_idx, self.sequences)
-                    model = self.base_model(n)
+                    train_X, train_lengths = combine_sequences(cv_train_idx, self.sequences)
+                    test_X, test_lengths = combine_sequences(cv_test_idx, self.sequences)
+                    training_model = GaussianHMM(n_components=n, covariance_type="diag", n_iter=1000,
+                                                 random_state=self.random_state,
+                                                 verbose=False).fit(train_X, train_lengths)
                     # Use try/except to catch ValueError: rows of transmat_ must sum to 1.0
                     # https://discussions.udacity.com/t/hmmlearn-valueerror-rows-of-transmat--must-sum-to-1-0/229995/7
                     try:
-                        cumulative_logL += model.score(fold_X, fold_lengths)
+                        cumulative_logL += training_model.score(test_X, test_lengths)
                         count += 1
                     except (ValueError, AttributeError):
                         continue
@@ -188,7 +191,7 @@ class SelectorCV(ModelSelector):
                     highest_logL = avg_logL
                     best_n = n
         else:
-            for n in range(self.min_n_components, self.max_n_components):
+            for n in range(self.min_n_components, self.max_n_components + 1):
                 try:
                     logL = self.base_model(n).score(self.X, self.lengths)
                 except (ValueError, AttributeError):
